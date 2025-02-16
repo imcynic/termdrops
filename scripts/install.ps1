@@ -43,6 +43,17 @@ function Install-TermDrops {
     # Create __init__.py
     Set-Content (Join-Path $packageDir "__init__.py") ""
 
+    # Create __main__.py
+    $mainContent = @'
+"""Main entry point for termdrops package."""
+from termdrops.cli import main
+
+if __name__ == '__main__':
+    main()
+'@
+
+    Set-Content (Join-Path $packageDir "__main__.py") $mainContent
+
     # Create cli.py with the updated code
     $cliContent = @'
 """CLI module for termdrops."""
@@ -281,6 +292,13 @@ setup(
     Write-Host "Installing package..."
     Set-Location $srcDir
     & $pipPath install -e .
+    
+    # Verify the script was created
+    $cliScript = Join-Path $baseDir "Scripts\termdrops.exe"
+    if (-not (Test-Path $cliScript)) {
+        Write-Host "Warning: CLI script not created. Trying alternative installation..."
+        & $pipPath install --no-cache-dir -e .
+    }
 
     # Setup command tracking
     $profile_content = @'
@@ -320,10 +338,10 @@ Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Act
         Set-Content $PROFILE $profile_content
     }
 
-    # Create wrapper script
+    # Create wrapper script that calls the CLI directly
     $wrapperContent = @'
 #!/usr/bin/env pwsh
-& "$env:USERPROFILE\.termdrops\Scripts\python.exe" -m termdrops $args
+& "$env:USERPROFILE\.termdrops\Scripts\termdrops.exe" $args
 '@
     Set-Content (Join-Path $binPath "termdrops.ps1") $wrapperContent
 
