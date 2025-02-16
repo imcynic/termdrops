@@ -6,16 +6,10 @@ import uuid
 import json
 import time
 import requests
-from supabase import create_client, Client
 
-# Your Databutton app URL
+# Your Databutton app URL and API URLs
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = "https://api.databutton.com/api/routes"
-SUPABASE_URL = "https://yvroxuwklsjunvymogvp.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2cm94dXdrbHNqdW52eW1vZ3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk1NjQwNzEsImV4cCI6MjA1NTE0MDA3MX0.ph-LQQPpq7GmNDshwwQt3cYwIQTcf3wKvXOQ01KZpeM"
-
-# Initialize Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+API_URL = "https://cynic.databutton.app/termdrops/api/drops"  # Updated API URL
 
 # Store terminal ID and session
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -62,8 +56,7 @@ def connect(user_id):
             },
             headers={
                 "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Origin": "cli"
+                "Accept": "application/json"
             }
         )
         
@@ -92,8 +85,7 @@ def connect(user_id):
                 },
                 headers={
                     "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Origin": "cli"
+                    "Accept": "application/json"
                 }
             )
             
@@ -143,8 +135,7 @@ def login():
                     },
                     headers={
                         "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "Origin": "cli"
+                        "Accept": "application/json"
                     }
                 )
                 
