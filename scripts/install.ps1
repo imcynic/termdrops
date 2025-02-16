@@ -22,15 +22,6 @@ try {
     exit 1
 }
 
-# Check if git is installed
-try {
-    git --version
-} catch {
-    Write-Host "Error: Git is required but not installed."
-    Write-Host "Please install Git from https://git-scm.com/downloads"
-    exit 1
-}
-
 # Create base directory
 $BaseDir = "$env:USERPROFILE\.termdrops"
 Write-Host "Installing to $BaseDir..."
@@ -40,11 +31,21 @@ if (Test-Path $BaseDir) {
     Remove-Item -Recurse -Force $BaseDir
 }
 
-# Create directory and clone repository
+# Create directory and download repository
 New-Item -ItemType Directory -Force -Path $BaseDir
 Set-Location $BaseDir
-Write-Host "Cloning TermDrops repository..."
-git clone https://github.com/imcynic/termdrops.git
+
+# Download and extract repository
+Write-Host "Downloading TermDrops..."
+$ZipUrl = "https://github.com/imcynic/termdrops/archive/refs/heads/main.zip"
+$ZipFile = "$BaseDir\termdrops.zip"
+Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipFile
+
+# Extract ZIP
+Write-Host "Extracting files..."
+Expand-Archive -Path $ZipFile -DestinationPath $BaseDir
+Remove-Item $ZipFile
+Rename-Item "$BaseDir\termdrops-main" "$BaseDir\termdrops"
 Set-Location termdrops
 
 # Create and activate virtual environment inside the repository
