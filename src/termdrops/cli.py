@@ -9,7 +9,7 @@ import time
 
 # Your Databutton app URL
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = f"{APP_URL}/drops"
+API_URL = f"{APP_URL}/drops"  # Removed /api/ to match current setup
 
 # Store terminal ID
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -40,8 +40,68 @@ def main():
     pass
 
 @main.command()
+@click.argument('token')
+def connect(token):
+    """Connect to your TermDrops account using a token."""
+    try:
+        # Get or create terminal ID
+        terminal_id = get_or_create_terminal_id()
+        
+        # Connect terminal using token
+        response = requests.post(
+            f"{API_URL}/connect-terminal",
+            json={
+                "user_id": terminal_id,
+                "command": token
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Origin": "cli"
+            }
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            click.echo(data.get("message", "Terminal connected successfully!"))
+            
+            # If we got a pet, it will be in the response
+            if data.get("dropped"):
+                click.echo(f"\nCongratulations! You found a {data['rarity_tier']} pet: {data['pet_name']}!")
+            
+            # Verify connection
+            verify_response = requests.post(
+                f"{API_URL}/process-command",
+                json={
+                    "user_id": terminal_id,
+                    "command": "login"
+                },
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Origin": "cli"
+                }
+            )
+            
+            if verify_response.status_code == 200:
+                verify_data = verify_response.json()
+                if verify_data.get("success"):
+                    click.echo("\nTerminal ready to collect pets! Start using commands to find more pets.")
+                    return
+            
+            click.echo("\nConnection successful but verification failed. You may need to reconnect.")
+            click.echo("Try 'termdrops login' if you have issues.")
+        else:
+            click.echo(f"Error connecting terminal: {response.status_code} {response.reason}")
+            click.echo("Please try again or use 'termdrops login' to connect through browser.")
+            
+    except Exception as e:
+        click.echo(f"Error connecting terminal: {str(e)}")
+        click.echo("Please try again or contact support if the issue persists.")
+
+@main.command()
 def login():
-    """Connect to your TermDrops account."""
+    """Connect to your TermDrops account through browser login (fallback method)."""
     try:
         # Get or create terminal ID
         terminal_id = get_or_create_terminal_id()
