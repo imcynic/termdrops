@@ -5,6 +5,7 @@ import requests
 import os
 import uuid
 import json
+import time
 
 # Your Databutton app URL
 APP_URL = "https://cynic.databutton.app/termdrops"
@@ -41,41 +42,67 @@ def main():
 @main.command()
 def login():
     """Connect to your TermDrops account."""
-    click.echo("Opening TermDrops login page in your browser...")
-    click.echo("Please log in and follow the instructions to connect your terminal.")
-    
     try:
         # Get or create terminal ID
         terminal_id = get_or_create_terminal_id()
         
         # Open login page with terminal ID
         login_url = f"{APP_URL}/Login?terminal_id={terminal_id}"
+        click.echo("Opening TermDrops login page in your browser...")
+        click.echo("Please log in and follow the instructions to connect your terminal.")
         webbrowser.open(login_url)
         
-        # Send login command to API
-        response = requests.post(
-            f"{API_URL}/process-command",
-            json={
-                "user_id": terminal_id,
-                "command": "login"
-            },
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        )
+        # Wait a bit for the user to log in
+        time.sleep(2)
         
-        if response.status_code != 200:
-            click.echo(f"Error during login: {response.status_code} {response.reason}")
-            click.echo(f"Please visit {login_url} manually to connect your terminal.")
-            return
-            
-        data = response.json()
-        click.echo(data.get("message", "Please check your browser to complete the login process."))
+        # Try to verify connection
+        max_retries = 5
+        retry_delay = 2
+        
+        for i in range(max_retries):
+            try:
+                response = requests.post(
+                    f"{API_URL}/process-command",
+                    json={
+                        "user_id": terminal_id,
+                        "command": "login"
+                    },
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "Origin": "cli"
+                    }
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    click.echo(data.get("message", "Terminal connected successfully!"))
+                    return
+                elif response.status_code == 403:
+                    # Still not logged in, wait and retry
+                    if i < max_retries - 1:
+                        click.echo("Waiting for login...")
+                        time.sleep(retry_delay)
+                    else:
+                        click.echo("Login timeout. Please try again or visit the login page manually:")
+                        click.echo(login_url)
+                else:
+                    click.echo(f"Error during login: {response.status_code} {response.reason}")
+                    click.echo(f"Please visit {login_url} manually to connect your terminal.")
+                    return
+                    
+            except Exception as e:
+                if i < max_retries - 1:
+                    click.echo("Retrying connection...")
+                    time.sleep(retry_delay)
+                else:
+                    click.echo(f"Error during login: {str(e)}")
+                    click.echo(f"Please visit {login_url} manually to connect your terminal.")
+                    return
             
     except Exception as e:
         click.echo(f"Error during login: {str(e)}")
-        click.echo(f"Please visit {APP_URL}/Login manually to connect your terminal.")
+        click.echo("Please try again or contact support if the issue persists.")
 
 if __name__ == '__main__':
     main()
