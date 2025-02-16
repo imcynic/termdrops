@@ -1,4 +1,4 @@
-kk# TermDrops Installation Script
+k# TermDrops Installation Script
 
 $ErrorActionPreference = 'Stop'
 
@@ -23,7 +23,7 @@ try {
 }
 
 # Create installation directory
-$InstallDir = "$env:USERPROFILE\.termdrops"
+$InstallDir = Join-Path $env:USERPROFILE ".termdrops"
 Write-Host "Installing to $InstallDir..."
 
 # Remove existing installation if it exists
@@ -37,16 +37,19 @@ Set-Location $InstallDir
 
 # Download and extract repository
 Write-Host "Downloading TermDrops..."
-$ZipUrl = "https://github.com/imcynic/termdrops/archive/refs/heads/main.zip"
-$ZipFile = "$InstallDir\termdrops.zip"
+$RepoOwner = "imcynic"
+$RepoName = "termdrops"
+$Branch = "main"
+$ZipUrl = "https://github.com/$RepoOwner/$RepoName/archive/refs/heads/$Branch.zip"
+$ZipFile = Join-Path $InstallDir "termdrops.zip"
 Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipFile
 
 # Extract ZIP
 Write-Host "Extracting files..."
 Expand-Archive -Path $ZipFile -DestinationPath $InstallDir
 Remove-Item $ZipFile
-Rename-Item "$InstallDir\termdrops-main" "$InstallDir\termdrops"
-Set-Location termdrops
+Rename-Item (Join-Path $InstallDir "$RepoName-$Branch") (Join-Path $InstallDir $RepoName)
+Set-Location $RepoName
 
 # Install the package globally
 Write-Host "Installing TermDrops package..."
@@ -59,28 +62,33 @@ if (-not (Test-Path $ProfileDir)) {
     New-Item -ItemType Directory -Force -Path $ProfileDir
 }
 
-# Add command tracking to PowerShell profile
-$ProfileContent = @"
-# TermDrops Command Tracking
-
-# Function to process commands through TermDrops
+# Create the command tracking function
+$CommandFunction = @'
 function global:Process-TermDropsCommand {
-    param(`$Command)
-    python -m termdrops "`$Command"
+    param($Command)
+    python -m termdrops "$Command"
 }
+'@
 
-# Register the command processor
-`$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -Forward -MaxTriggerCount 1
+# Create the event registration
+$EventRegistration = @'
+$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -Forward -MaxTriggerCount 1
 Register-ObjectEvent -InputObject (Get-EventSubscriber -SourceIdentifier PowerShell.OnIdle).Action -EventName OnInvoke -Forward -Action {
-    if (`$global:LastCommand) {
-        Process-TermDropsCommand `$global:LastCommand
+    if ($global:LastCommand) {
+        Process-TermDropsCommand $global:LastCommand
     }
 }
+'@
+
+# Combine profile content
+$ProfileContent = @"
+# TermDrops Command Tracking
+$CommandFunction
+$EventRegistration
 "@
 
 # Add to existing profile or create new one
 if (Test-Path $PROFILE) {
-    # Check if TermDrops is already in profile
     $ExistingProfile = Get-Content $PROFILE -Raw
     if ($ExistingProfile -notlike "*TermDrops Command Tracking*") {
         Add-Content $PROFILE "`n$ProfileContent"
@@ -89,15 +97,16 @@ if (Test-Path $PROFILE) {
     Set-Content $PROFILE $ProfileContent
 }
 
-# Create wrapper script for termdrops CLI commands
-$WrapperScript = @"
+# Create wrapper script directory
+$WrapperPath = Join-Path $env:USERPROFILE ".local\bin"
+New-Item -ItemType Directory -Force -Path $WrapperPath
+
+# Create wrapper script
+$WrapperContent = @'
 #!pwsh
 python -m termdrops @args
-"@
-
-$WrapperPath = "$env:USERPROFILE\.local\bin"
-New-Item -ItemType Directory -Force -Path $WrapperPath
-Set-Content -Path "$WrapperPath\termdrops.ps1" -Value $WrapperScript
+'@
+Set-Content -Path (Join-Path $WrapperPath "termdrops.ps1") -Value $WrapperContent
 
 # Add to PATH if needed
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
