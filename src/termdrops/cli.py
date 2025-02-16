@@ -1,15 +1,19 @@
 """CLI module for termdrops."""
 import click
 import webbrowser
-import requests
 import os
 import uuid
 import json
 import time
+from supabase import create_client, Client
 
 # Your Databutton app URL
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = "https://api.databutton.com/api/routes"  # Updated to use the correct API domain
+SUPABASE_URL = "https://yvroxuwklsjunvymogvp.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2cm94dXdrbHNqdW52eW1vZ3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk1NjQwNzEsImV4cCI6MjA1NTE0MDA3MX0.ph-LQQPpq7GmNDshwwQt3cYwIQTcf3wKvXOQ01KZpeM"
+
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Store terminal ID
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -40,68 +44,47 @@ def main():
     pass
 
 @main.command()
-@click.argument('token')
-def connect(token):
-    """Connect to your TermDrops account using a token."""
+@click.argument('user_id')
+def connect(user_id):
+    """Connect to your TermDrops account using your user ID."""
     try:
         # Get or create terminal ID
         terminal_id = get_or_create_terminal_id()
         
-        # Connect terminal using token
-        response = requests.post(
-            f"{API_URL}/connect-terminal",
-            json={
-                "user_id": terminal_id,
-                "command": token
-            },
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Origin": "cli"
-            }
-        )
+        # Connect terminal using Supabase
+        data, error = supabase.table('user_terminals').upsert({
+            'user_id': user_id,
+            'terminal_id': terminal_id,
+            'connected_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            'last_command': None,
+            'is_connected': True
+        }).execute()
         
-        # Print response for debugging
-        print(f"Response status: {response.status_code}")
-        print(f"Response headers: {response.headers}")
-        try:
-            print(f"Response body: {response.json()}")
-        except:
-            print(f"Raw response: {response.text}")
+        if error:
+            click.echo(f"Error connecting terminal: {error}")
+            click.echo("Please try again or use 'termdrops login' to connect through browser.")
+            return
         
-        if response.status_code == 200:
-            data = response.json()
-            click.echo(data.get("message", "Terminal connected successfully!"))
+        click.echo("Terminal connected successfully!")
+        
+        # Verify connection
+        data, error = supabase.table('user_terminals')\
+            .select('*')\
+            .eq('user_id', user_id)\
+            .eq('terminal_id', terminal_id)\
+            .eq('is_connected', True)\
+            .execute()
             
-            # If we got a pet, it will be in the response
-            if data.get("dropped"):
-                click.echo(f"\nCongratulations! You found a {data['rarity_tier']} pet: {data['pet_name']}!")
-            
-            # Verify connection
-            verify_response = requests.post(
-                f"{API_URL}/process-command",
-                json={
-                    "user_id": terminal_id,
-                    "command": "login"
-                },
-                headers={
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Origin": "cli"
-                }
-            )
-            
-            if verify_response.status_code == 200:
-                verify_data = verify_response.json()
-                if verify_data.get("success"):
-                    click.echo("\nTerminal ready to collect pets! Start using commands to find more pets.")
-                    return
-            
+        if error:
             click.echo("\nConnection successful but verification failed. You may need to reconnect.")
             click.echo("Try 'termdrops login' if you have issues.")
+            return
+            
+        if len(data[1]) > 0:
+            click.echo("\nTerminal ready to collect pets! Start using commands to find more pets.")
         else:
-            click.echo(f"Error connecting terminal: {response.status_code} {response.reason}")
-            click.echo("Please try again or use 'termdrops login' to connect through browser.")
+            click.echo("\nConnection successful but verification failed. You may need to reconnect.")
+            click.echo("Try 'termdrops login' if you have issues.")
             
     except Exception as e:
         click.echo(f"Error connecting terminal: {str(e)}")
@@ -129,35 +112,30 @@ def login():
         
         for i in range(max_retries):
             try:
-                response = requests.post(
-                    f"{API_URL}/process-command",
-                    json={
-                        "user_id": terminal_id,
-                        "command": "login"
-                    },
-                    headers={
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "Origin": "cli"
-                    }
-                )
+                data, error = supabase.table('user_terminals')\
+                    .select('*')\
+                    .eq('terminal_id', terminal_id)\
+                    .eq('is_connected', True)\
+                    .execute()
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    click.echo(data.get("message", "Terminal connected successfully!"))
-                    return
-                elif response.status_code == 403:
-                    # Still not logged in, wait and retry
+                if error:
                     if i < max_retries - 1:
-                        click.echo("Waiting for login...")
+                        click.echo("Retrying connection...")
                         time.sleep(retry_delay)
                     else:
-                        click.echo("Login timeout. Please try again or visit the login page manually:")
-                        click.echo(login_url)
-                else:
-                    click.echo(f"Error during login: {response.status_code} {response.reason}")
-                    click.echo(f"Please visit {login_url} manually to connect your terminal.")
+                        click.echo(f"Error during login: {error}")
+                        click.echo(f"Please visit {login_url} manually to connect your terminal.")
+                        return
+                elif len(data[1]) > 0:
+                    click.echo("Terminal connected successfully!")
+                    click.echo("\nTerminal ready to collect pets! Start using commands to find more pets.")
                     return
+                elif i < max_retries - 1:
+                    click.echo("Waiting for login...")
+                    time.sleep(retry_delay)
+                else:
+                    click.echo("Login timeout. Please try again or visit the login page manually:")
+                    click.echo(login_url)
                     
             except Exception as e:
                 if i < max_retries - 1:
