@@ -9,7 +9,7 @@ import requests
 
 # Your Databutton app URL and API URLs
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = "https://cynic.databutton.app/api/drops"  # Updated to match Databutton API structure
+API_URL = "https://api.databutton.com/_projects/f9e24496-ea7b-4714-b109-1aaf70a5bfee/dbtn/prodx/app/routes"  # Updated to match Databutton API structure
 
 # Store terminal ID and session
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
