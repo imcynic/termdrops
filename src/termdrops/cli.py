@@ -9,7 +9,7 @@ import time
 
 # Your Databutton app URL
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = f"{APP_URL}/api/drops"
+API_URL = f"{APP_URL}/drops"
 
 # Store terminal ID
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
