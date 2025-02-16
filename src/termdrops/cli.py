@@ -9,7 +9,7 @@ import requests
 
 # Your Databutton app URL and API URLs
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = "https://cynic.databutton.app/termdrops/api/drops"  # Updated API URL
+API_URL = "https://cynic.databutton.app/api/drops"  # Updated to match Databutton API structure
 
 # Store terminal ID and session
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -56,7 +56,8 @@ def connect(user_id):
             },
             headers={
                 "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Accept": "application/json",
+                "Origin": "https://cynic.databutton.app"  # Add origin header
             }
         )
         
@@ -85,7 +86,8 @@ def connect(user_id):
                 },
                 headers={
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
+                    "Origin": "https://cynic.databutton.app"  # Add origin header
                 }
             )
             
@@ -99,8 +101,15 @@ def connect(user_id):
             click.echo("Try 'termdrops login' if you have issues.")
         else:
             click.echo(f"Error connecting terminal: {response.status_code} {response.reason}")
-            click.echo("Please try again or use 'termdrops login' to connect through browser.")
+            if response.status_code == 403:
+                click.echo("Access denied. This might be a CORS issue.")
+                click.echo("Try using 'termdrops login' instead to connect through browser.")
+            else:
+                click.echo("Please try again or use 'termdrops login' to connect through browser.")
             
+    except requests.exceptions.ConnectionError:
+        click.echo("Error: Could not connect to TermDrops server.")
+        click.echo("Please check your internet connection and try again.")
     except Exception as e:
         click.echo(f"Error connecting terminal: {str(e)}")
         click.echo("Please try again or contact support if the issue persists.")
@@ -135,7 +144,8 @@ def login():
                     },
                     headers={
                         "Content-Type": "application/json",
-                        "Accept": "application/json"
+                        "Accept": "application/json",
+                        "Origin": "https://cynic.databutton.app"  # Add origin header
                     }
                 )
                 
@@ -153,9 +163,19 @@ def login():
                         click.echo(login_url)
                 else:
                     click.echo(f"Error during login: {response.status_code} {response.reason}")
+                    if response.status_code == 403:
+                        click.echo("Access denied. This might be a CORS issue.")
                     click.echo(f"Please visit {login_url} manually to connect your terminal.")
                     return
                     
+            except requests.exceptions.ConnectionError:
+                if i < max_retries - 1:
+                    click.echo("Connection failed, retrying...")
+                    time.sleep(retry_delay)
+                else:
+                    click.echo("Could not connect to TermDrops server.")
+                    click.echo("Please check your internet connection and try again.")
+                    return
             except Exception as e:
                 if i < max_retries - 1:
                     click.echo("Retrying connection...")
