@@ -3,29 +3,25 @@ from setuptools import setup, find_packages
 setup(
     name="termdrops",
     version="0.1.0",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    package_dir={"": "src"},  # Add this line to specify src directory
+    packages=find_packages(where="src"),  # Update this to look in src
     install_requires=[
-        'venv',           # For creating virtual environments
-        'pip>=21.0',      # For package management
-        'setuptools',     # For package installation
-        'wheel',          # For building wheel distributions
-        'blessed',        # For terminal colors and keyboard input
-        'colorama',       # For Windows color support
-        'pynput',         # For keyboard input handling
-        'python-dotenv',  # For environment variables
+        "click>=8.0.0",
+        "requests>=2.25.0",
+        "rich>=10.0.0",
+        "python-dotenv>=0.19.0",
     ],
     entry_points={
-        'console_scripts': [
-            'termdrops=termdrops.__main__:main',
+        "console_scripts": [
+            "termdrops=termdrops.cli:main",
         ],
     },
-    author="Cynic + Lukanbot",
-    author_email="banner94@outlook.com",
-    description="A terminal-based game that runs in both PowerShell and Unix terminals",
+    author="LT Lives",
+    author_email="your.email@example.com",
+    description="TermDrops CLI - Collect pets while using your terminal",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/termdrops",
+    url="https://github.com/imcynic/termdrops",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

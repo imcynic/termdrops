@@ -22,18 +22,35 @@ try {
     exit 1
 }
 
+# Check if git is installed
+try {
+    git --version
+} catch {
+    Write-Host "Error: Git is required but not installed."
+    Write-Host "Please install Git from https://git-scm.com/downloads"
+    exit 1
+}
+
 # Create installation directory
 $InstallDir = "$env:USERPROFILE\.termdrops"
 Write-Host "Creating virtual environment at $InstallDir..."
+
+# Remove existing installation if it exists
+if (Test-Path $InstallDir) {
+    Remove-Item -Recurse -Force $InstallDir
+}
 
 # Create and activate virtual environment
 python -m venv $InstallDir
 & "$InstallDir\Scripts\Activate.ps1"
 
-# Install TermDrops
+# Clone and install TermDrops
 Write-Host "Installing TermDrops package..."
+Set-Location $InstallDir
+git clone https://github.com/imcynic/termdrops.git
+Set-Location termdrops
 python -m pip install --upgrade pip
-pip install termdrops
+pip install -e .
 
 # Create wrapper script
 $WrapperScript = @"
