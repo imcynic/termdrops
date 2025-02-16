@@ -31,32 +31,73 @@ try {
     exit 1
 }
 
-# Create installation directory
-$InstallDir = "$env:USERPROFILE\.termdrops"
-Write-Host "Creating virtual environment at $InstallDir..."
+# Create base directory
+$BaseDir = "$env:USERPROFILE\.termdrops"
+Write-Host "Installing to $BaseDir..."
 
 # Remove existing installation if it exists
-if (Test-Path $InstallDir) {
-    Remove-Item -Recurse -Force $InstallDir
+if (Test-Path $BaseDir) {
+    Remove-Item -Recurse -Force $BaseDir
 }
 
-# Create and activate virtual environment
-python -m venv $InstallDir
-& "$InstallDir\Scripts\Activate.ps1"
-
-# Clone and install TermDrops
-Write-Host "Installing TermDrops package..."
-Set-Location $InstallDir
+# Create directory and clone repository
+New-Item -ItemType Directory -Force -Path $BaseDir
+Set-Location $BaseDir
+Write-Host "Cloning TermDrops repository..."
 git clone https://github.com/imcynic/termdrops.git
 Set-Location termdrops
+
+# Create and activate virtual environment inside the repository
+Write-Host "Creating virtual environment..."
+python -m venv venv
+& ".\venv\Scripts\Activate.ps1"
+
+# Install the package
+Write-Host "Installing TermDrops package..."
 python -m pip install --upgrade pip
 pip install -e .
 
-# Create wrapper script
+# Create PowerShell profile directory if it doesn't exist
+$ProfileDir = Split-Path $PROFILE
+if (-not (Test-Path $ProfileDir)) {
+    New-Item -ItemType Directory -Force -Path $ProfileDir
+}
+
+# Add command tracking to PowerShell profile
+$ProfileContent = @"
+# TermDrops Command Tracking
+`$env:TERMDROPS_VENV = "$BaseDir\termdrops\venv"
+
+# Function to process commands through TermDrops
+function global:Process-TermDropsCommand {
+    param(`$Command)
+    & "$BaseDir\termdrops\venv\Scripts\python.exe" -m termdrops "`$Command"
+}
+
+# Register the command processor
+`$null = Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -Forward -MaxTriggerCount 1
+Register-ObjectEvent -InputObject (Get-EventSubscriber -SourceIdentifier PowerShell.OnIdle).Action -EventName OnInvoke -Forward -Action {
+    if (`$global:LastCommand) {
+        Process-TermDropsCommand `$global:LastCommand
+    }
+}
+"@
+
+# Add to existing profile or create new one
+if (Test-Path $PROFILE) {
+    # Check if TermDrops is already in profile
+    $ExistingProfile = Get-Content $PROFILE -Raw
+    if ($ExistingProfile -notlike "*TermDrops Command Tracking*") {
+        Add-Content $PROFILE "`n$ProfileContent"
+    }
+} else {
+    Set-Content $PROFILE $ProfileContent
+}
+
+# Create wrapper script for termdrops CLI commands
 $WrapperScript = @"
 #!pwsh
-& "$InstallDir\Scripts\Activate.ps1"
-python -m termdrops @args
+& "$BaseDir\termdrops\venv\Scripts\python.exe" -m termdrops @args
 "@
 
 $WrapperPath = "$env:USERPROFILE\.local\bin"
@@ -76,4 +117,9 @@ if ($UserPath -notlike "*$WrapperPath*") {
 
 Write-Host ""
 Write-Host "TermDrops CLI installed successfully!"
+Write-Host "Please restart PowerShell for command tracking to take effect."
 Write-Host "Run 'termdrops login' to connect to your account."
+
+# Keep window open to see any errors
+Write-Host "`nPress any key to continue..."
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
