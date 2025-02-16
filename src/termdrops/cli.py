@@ -9,7 +9,7 @@ import time
 
 # Your Databutton app URL
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = "https://cynic.databutton.app/api/drops"  # Updated to use the correct API path
+API_URL = "https://api.cynic.databutton.app/drops"  # Updated to use the API domain
 
 # Store terminal ID
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -51,7 +51,7 @@ def connect(token):
         response = requests.post(
             f"{API_URL}/connect-terminal",
             json={
-                "body": {  # Wrap in body object to match API expectations
+                "body": {
                     "user_id": terminal_id,
                     "command": token
                 }
@@ -83,7 +83,7 @@ def connect(token):
             verify_response = requests.post(
                 f"{API_URL}/process-command",
                 json={
-                    "body": {  # Wrap in body object to match API expectations
+                    "body": {
                         "user_id": terminal_id,
                         "command": "login"
                     }
@@ -136,7 +136,7 @@ def login():
                 response = requests.post(
                     f"{API_URL}/process-command",
                     json={
-                        "body": {  # Wrap in body object to match API expectations
+                        "body": {
                             "user_id": terminal_id,
                             "command": "login"
                         }
