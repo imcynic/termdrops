@@ -1,4 +1,4 @@
-k"""CLI module for termdrops."""
+"""CLI module for termdrops."""
 import click
 import webbrowser
 import requests
