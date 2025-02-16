@@ -9,7 +9,7 @@ import time
 
 # Your Databutton app URL
 APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = f"{APP_URL}/drops"  # Removed /api/ to match current setup
+API_URL = "https://cynic.databutton.app/api/drops"  # Updated to use the correct API path
 
 # Store terminal ID
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -51,8 +51,10 @@ def connect(token):
         response = requests.post(
             f"{API_URL}/connect-terminal",
             json={
-                "user_id": terminal_id,
-                "command": token
+                "body": {  # Wrap in body object to match API expectations
+                    "user_id": terminal_id,
+                    "command": token
+                }
             },
             headers={
                 "Content-Type": "application/json",
@@ -60,6 +62,14 @@ def connect(token):
                 "Origin": "cli"
             }
         )
+        
+        # Print response for debugging
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        try:
+            print(f"Response body: {response.json()}")
+        except:
+            print(f"Raw response: {response.text}")
         
         if response.status_code == 200:
             data = response.json()
@@ -73,8 +83,10 @@ def connect(token):
             verify_response = requests.post(
                 f"{API_URL}/process-command",
                 json={
-                    "user_id": terminal_id,
-                    "command": "login"
+                    "body": {  # Wrap in body object to match API expectations
+                        "user_id": terminal_id,
+                        "command": "login"
+                    }
                 },
                 headers={
                     "Content-Type": "application/json",
@@ -124,8 +136,10 @@ def login():
                 response = requests.post(
                     f"{API_URL}/process-command",
                     json={
-                        "user_id": terminal_id,
-                        "command": "login"
+                        "body": {  # Wrap in body object to match API expectations
+                            "user_id": terminal_id,
+                            "command": "login"
+                        }
                     },
                     headers={
                         "Content-Type": "application/json",
