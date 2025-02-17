@@ -7,9 +7,9 @@ import json
 import time
 import requests
 
-# Your Databutton app URL and API URLs
-APP_URL = "https://cynic.databutton.app/termdrops"
-API_URL = "https://api.databutton.com/_projects/f9e24496-ea7b-4714-b109-1aaf70a5bfee/dbtn/prodx/app/routes"  # Updated to match Databutton API structure
+# Your Databutton app URLs - using direct API URL
+APP_URL = "https://cynic.databutton.app/termdrops"  # Frontend URL
+API_URL = "https://api.databutton.com/_projects/f9e24496-ea7b-4714-b109-1aaf70a5bfee/dbtn/prodx/app/routes"  # Direct API URL
 
 # Store terminal ID and session
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -49,7 +49,7 @@ def connect(user_id):
         
         # Connect terminal using our API
         response = requests.post(
-            f"{API_URL}/connect-terminal",
+            f"{API_URL}/drops/connect-terminal",  # Updated endpoint path
             json={
                 "user_id": terminal_id,
                 "command": user_id
@@ -57,7 +57,7 @@ def connect(user_id):
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "Origin": "https://cynic.databutton.app"  # Add origin header
+                "Origin": APP_URL  # Use frontend URL as origin
             }
         )
         
@@ -79,7 +79,7 @@ def connect(user_id):
             
             # Verify connection
             verify_response = requests.post(
-                f"{API_URL}/process-command",
+                f"{API_URL}/drops/process-command",  # Updated endpoint path
                 json={
                     "user_id": terminal_id,
                     "command": "login"
@@ -87,7 +87,7 @@ def connect(user_id):
                 headers={
                     "Content-Type": "application/json",
                     "Accept": "application/json",
-                    "Origin": "https://cynic.databutton.app"  # Add origin header
+                    "Origin": APP_URL  # Use frontend URL as origin
                 }
             )
             
@@ -137,7 +137,7 @@ def login():
         for i in range(max_retries):
             try:
                 response = requests.post(
-                    f"{API_URL}/process-command",
+                    f"{API_URL}/drops/process-command",  # Updated endpoint path
                     json={
                         "user_id": terminal_id,
                         "command": "login"
@@ -145,7 +145,7 @@ def login():
                     headers={
                         "Content-Type": "application/json",
                         "Accept": "application/json",
-                        "Origin": "https://cynic.databutton.app"  # Add origin header
+                        "Origin": APP_URL  # Use frontend URL as origin
                     }
                 )
                 
