@@ -14,30 +14,19 @@ function Install-TermDrops {
     }
 
     # Setup paths
-    $baseDir = Join-Path $env:USERPROFILE ".termdrops"
-    $srcDir = Join-Path $baseDir "src"
-    $binPath = Join-Path $env:USERPROFILE ".local\bin"
+    $tempDir = Join-Path $env:TEMP "termdrops_install"
+    $configDir = Join-Path $env:USERPROFILE ".termdrops"
 
     # Clean and create directories
     Write-Host "Creating directories..."
-    Remove-Item -Recurse -Force $baseDir -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Force -Path $baseDir | Out-Null
-    New-Item -ItemType Directory -Force -Path $srcDir | Out-Null
-    New-Item -ItemType Directory -Force -Path $binPath | Out-Null
-
-    # Create virtual environment
-    Write-Host "Creating virtual environment..."
-    python -m venv $baseDir
-    $pythonPath = Join-Path $baseDir "Scripts\python.exe"
-    $pipPath = Join-Path $baseDir "Scripts\pip.exe"
-
-    # Upgrade pip
-    Write-Host "Upgrading pip..."
-    & $pythonPath -m pip install --upgrade pip
+    Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $configDir -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+    New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 
     # Create package structure
     Write-Host "Creating package structure..."
-    $packageDir = Join-Path $srcDir "termdrops"
+    $packageDir = Join-Path $tempDir "termdrops"
     New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 
     # Create __init__.py
@@ -107,7 +96,7 @@ def connect(user_id):
         
         # Connect terminal using our API
         response = requests.post(
-            f"{API_URL}/drops/connect-terminal",  # Updated endpoint path
+            f"{API_URL}/drops/connect-terminal",
             json={
                 "user_id": terminal_id,
                 "command": user_id
@@ -115,17 +104,9 @@ def connect(user_id):
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "Origin": APP_URL  # Use frontend URL as origin
+                "Origin": APP_URL
             }
         )
-        
-        # Print response for debugging
-        print(f"Response status: {response.status_code}")
-        print(f"Response headers: {response.headers}")
-        try:
-            print(f"Response body: {response.json()}")
-        except:
-            print(f"Raw response: {response.text}")
         
         if response.status_code == 200:
             data = response.json()
@@ -137,7 +118,7 @@ def connect(user_id):
             
             # Verify connection
             verify_response = requests.post(
-                f"{API_URL}/drops/process-command",  # Updated endpoint path
+                f"{API_URL}/drops/process-command",
                 json={
                     "user_id": terminal_id,
                     "command": "login"
@@ -145,7 +126,7 @@ def connect(user_id):
                 headers={
                     "Content-Type": "application/json",
                     "Accept": "application/json",
-                    "Origin": APP_URL  # Use frontend URL as origin
+                    "Origin": APP_URL
                 }
             )
             
@@ -195,7 +176,7 @@ def login():
         for i in range(max_retries):
             try:
                 response = requests.post(
-                    f"{API_URL}/drops/process-command",  # Updated endpoint path
+                    f"{API_URL}/drops/process-command",
                     json={
                         "user_id": terminal_id,
                         "command": "login"
@@ -203,7 +184,7 @@ def login():
                     headers={
                         "Content-Type": "application/json",
                         "Accept": "application/json",
-                        "Origin": APP_URL  # Use frontend URL as origin
+                        "Origin": APP_URL
                     }
                 )
                 
@@ -286,19 +267,12 @@ setup(
 )
 '@
 
-    Set-Content (Join-Path $srcDir "setup.py") $setupContent
+    Set-Content (Join-Path $tempDir "setup.py") $setupContent
 
-    # Install package
+    # Install package globally for the current user
     Write-Host "Installing package..."
-    Set-Location $srcDir
-    & $pipPath install -e .
-    
-    # Verify the script was created
-    $cliScript = Join-Path $baseDir "Scripts\termdrops.exe"
-    if (-not (Test-Path $cliScript)) {
-        Write-Host "Warning: CLI script not created. Trying alternative installation..."
-        & $pipPath install --no-cache-dir -e .
-    }
+    Set-Location $tempDir
+    python -m pip install --user -e .
 
     # Setup command tracking
     $profile_content = @'
@@ -338,19 +312,18 @@ Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Act
         Set-Content $PROFILE $profile_content
     }
 
-    # Create wrapper script that calls the CLI directly
-    $wrapperContent = @'
-#!/usr/bin/env pwsh
-& "$env:USERPROFILE\.termdrops\Scripts\termdrops.exe" $args
-'@
-    Set-Content (Join-Path $binPath "termdrops.ps1") $wrapperContent
-
-    # Update PATH
-    $user_path = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($user_path -notlike "*$binPath*") {
-        [Environment]::SetEnvironmentVariable("Path", "$user_path;$binPath", "User")
-        $env:Path = "$env:Path;$binPath"
+    # Ensure Python Scripts directory is in PATH
+    $pythonScriptsPath = [System.IO.Path]::GetDirectoryName((Get-Command python).Source)
+    $pythonScriptsPath = Join-Path $pythonScriptsPath "Scripts"
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    
+    if ($userPath -notlike "*$pythonScriptsPath*") {
+        [Environment]::SetEnvironmentVariable("Path", "$userPath;$pythonScriptsPath", "User")
+        $env:Path = "$env:Path;$pythonScriptsPath"
     }
+
+    # Clean up
+    Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
 
     Write-Host "`nTermDrops CLI installed successfully!"
     Write-Host "Please restart PowerShell and run 'termdrops login'"
