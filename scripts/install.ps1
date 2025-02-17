@@ -67,7 +67,7 @@ import requests
 
 # Your Databutton app URLs - using direct API URL
 APP_URL = "https://cynic.databutton.app/termdrops"  # Frontend URL
-API_URL = "https://api.databutton.com/v1/data/cynic/termdrops"  # Direct API URL
+API_URL = "https://api.databutton.com/_projects/f9e24496-ea7b-4714-b109-1aaf70a5bfee/dbtn/prodx/app/routes"  # Direct API URL
 
 # Store terminal ID and session
 CONFIG_DIR = os.path.expanduser("~/.termdrops")
@@ -318,7 +318,7 @@ Register-EngineEvent -SourceIdentifier PowerShell.OnIdle -MaxTriggerCount 1 -Act
         } | ConvertTo-Json
         
         try {
-            Invoke-RestMethod -Uri "https://api.databutton.com/v1/data/cynic/termdrops/drops/process-command" -Method Post -Body $body -ContentType "application/json" -Headers @{
+            Invoke-RestMethod -Uri "https://api.databutton.com/_projects/f9e24496-ea7b-4714-b109-1aaf70a5bfee/dbtn/prodx/app/routes/drops/process-command" -Method Post -Body $body -ContentType "application/json" -Headers @{
                 "Accept" = "application/json"
                 "Origin" = "https://cynic.databutton.app/termdrops"
             }
