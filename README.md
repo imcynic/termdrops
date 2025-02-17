@@ -1,9 +1,8 @@
-# TermDrops CLI
+# TermDrops
 
-Collect pets while using your terminal! TermDrops adds MMO-style loot drops to your command-line usage.
+A fun gamification system for terminal users that adds MMO-style loot drops to command-line usage.
 
 ## Installation
 
-### Linux/macOS
-```bash
-curl -s https://raw.githubusercontent.com/imcynic/termdrops/main/scripts/install.sh | bash
+```powershell
+iwr -useb https://raw.githubusercontent.com/imcynic/termdrops/main/scripts/install.ps1 | iex
