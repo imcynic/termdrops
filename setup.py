@@ -3,8 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="termdrops",
     version="0.1.0",
-    package_dir={"": "src"},  # Add this line to specify src directory
-    packages=find_packages(where="src"),  # Update this to look in src
+    packages=find_packages(),
     install_requires=[
         "click>=8.0.0",
         "requests>=2.25.0",
@@ -16,11 +15,10 @@ setup(
             "termdrops=termdrops.cli:main",
         ],
     },
-    author="LT Lives",
+    author="Bryan Banner",
     author_email="your.email@example.com",
     description="TermDrops CLI - Collect pets while using your terminal",
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
+    long_description="A fun gamification system for terminal users that adds MMO-style loot drops to command-line usage.",
     url="https://github.com/imcynic/termdrops",
     classifiers=[
         "Programming Language :: Python :: 3",
